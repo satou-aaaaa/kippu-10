@@ -348,6 +348,7 @@ function play() {
   if (!run) return home();
   const i = run.res.length;
   if (i >= run.list.length) return finish();
+  if (run.mode === "a" && s.days[run.date]) { save((s2) => { s2.runs[MODE] = null; }); toast("この日は別の画面で遊び終えています"); return home(); } // 別のタブでその日の今日の5枚を終えたら、あとからの回は止める（2026-11-04 CodeRabbit）
   const key = run.list[i], no = numberOf(key, run.mode === "p" ? run.id + ":" + i : run.date + ":" + (run.mode === "a" ? "d" : run.mode) + ":" + i), hard = run.mode === "h"; // あとからは、その日の今日の5枚と同じ番号
   // 途中で閉じても、計算の手順とヒントはそのまま
   const saved = run.cur && run.cur.i === i && run.cur.key === key ? run.cur : { steps: [], hints: 0 };

@@ -321,6 +321,9 @@ try {
     // 今日の5枚を1手だけ進めておく（あとから遊んでも消えない）
     await pc.click("#go-d"); await pc.click('.cardn[data-j="0"]'); await pc.click('.op[data-op="+"]'); await pc.click('.cardn[data-j="1"]');
     check("2つを合わせてできたカードは弾む（手ごたえ）", (await pc.locator('.cardn.made[data-j="1"]').count()) === 1);
+    await pc.emulateMedia({ reducedMotion: "reduce" });
+    check("動きを減らす設定では、弾む動きが止まる", (await pc.evaluate(() => getComputedStyle(document.querySelector('.cardn.made[data-j="1"]')).animationName)) === "none");
+    await pc.emulateMedia({ reducedMotion: "no-preference" });
     await pc.click("#back"); await pc.click("#go-cal");
     const cls = (d) => pc.getAttribute(`.cal [data-k="2026-11-${d}"]`, "class");
     check("カレンダー：ヒントなしの日は濃い★3・ヒント1〜2は★2・3回以上は★1、上級の日に「難」", (await cls(19)).includes("p3") && (await cls(18)).includes("p2") && (await cls(17)).includes("p1") && (await pc.textContent('.cal [data-k="2026-11-19"]')).includes("難"));
@@ -349,6 +352,8 @@ try {
     await pr.click('.cal button[data-k="2026-11-16"]');
     const back = await pr.evaluate(() => { const g = window.__kp, c = g.cur(), s = g.load(); return { a: c.key === g.dailyList("2026-11-16")[0] && c.steps.length === 1, b: s.runs["a:2026-11-15"] && s.runs["a:2026-11-15"].cur.steps.length === 1 && s.runs["a:2026-11-15"].list[0] === g.dailyList("2026-11-15")[0] }; });
     check("あとから：A日を途中まで→B日を始める→A日に戻ると続きから（B日の途中も残る・カレンダーに「続き」）", back.a && back.b && mark.includes("続き"), JSON.stringify(back));
+    const other = await pr.evaluate((K) => { const x = JSON.parse(localStorage.getItem(K)); x.days["2026-11-16"] = { h: [0, 0, 0, 0, 0], f: [] }; localStorage.setItem(K, JSON.stringify(x)); window.__kp.play("a:2026-11-16"); const s = window.__kp.load(); return { home: !!document.querySelector("#go-cal"), run: s.runs["a:2026-11-16"] }; }, KEY);
+    check("あとから：その日の今日の5枚を別のタブで終えていたら、次の切符へ進まずホームへ戻る", other.home && !other.run, JSON.stringify(other));
     await pr.close(); }
   { // load：保存に失敗したあと、片方にしか無い新しいキー（adays）も失わない（両方を先に fresh() で補う）
     const pn2 = await newPage();
