@@ -1,0 +1,44 @@
+# AGENTS.md
+
+きっぷで10：切符の4つの数字（0〜9）と ＋−×÷ で10を作る1日5枚の数字パズル（テンパズル）。`index.html` と `ten.js`（計算と解き方）・`data.js`（解ける組と式）を GitHub Pages で公開する。
+
+## 準備（最初に一度）
+
+```bash
+bash scripts/setup.sh   # Node.js（版は .nvmrc）を確かめ、検査の依存とブラウザを入れる。何度実行してもよい
+```
+
+## push する前の確認
+
+```bash
+node qa/run.mjs   # 715通りを別の数え方で解き直して data.js と合うか・5枚の組み方（3年分）・通しで遊ぶ・戻す・分数・続きから・上級・切符帳・別解・スマホ幅・PWA（CI の QA と同じ）
+```
+
+## このリポジトリの決まり
+
+- `data.js` は `node tools/make-data.cjs` で作る（手で直さない）。出すのは解ける組だけ。難しさは式の数で決める（やさしい5通り以上・ふつう2〜4通り・むずかしい1通りか分数が要る）。式は `ten.js` の `show` で、足し算・かけ算の順番やかっこの付け方だけがちがう式を同じ式として数える。
+- 計算は分数で正確に行う（小数にしない）。0で割る計算は止める。並べかえ・かっこ・とちゅうの分数やマイナスは自由。
+- 今日の5枚（やさしい2・ふつう2・むずかしい1）・上級（むずかしい3）・切符の番号の並びは日本時間の日付から作る乱数（`seedOf`・`rng`）で決まり、だれでも同じ。むずかしいは1日4組ずつ使い、今日の5枚目と上級は重ならない。1周するまで同じ組は出ない。`Math.random()` は練習の切符選びと練習の番号の種だけ（QA が数を見る）。`ten.js` の難しさの分け方を変えると過去の日の切符も変わるので、変えた PR に一言書く。
+- ★はヒントの数（0で★3・1で★2・2で★1）。ヒントは最初の計算を2つまで。上級はヒントなし。時間制限は付けない。
+- 今日の5枚・上級は1日1回で、途中で閉じても計算の手順とヒントのまま続きから。途中経過はモードごとに分けて保存し（`runs.d`・`runs.h`・`runs.p`）、練習で今日・上級の途中を消さない。答えを入れる前に、保存した進み具合が画面と同じ切符か確かめる（古いタブで二重に入れない）。記録は保存の前に読み直す。保存に失敗したあとは、途中経過を時刻でなく進み具合で選び、帳の★は高いほうを残す（shared-workflows `incidents/2026-11-04-daily-game-save-gaps.md`）。
+- 切符は架空のもの。実在の鉄道会社の名前・ロゴ・切符の見た目をまねない（QA が会社名を見る）。
+- 共有は遊ぶ人が押したときに開くリンク（X・LINE・Web Share・コピー）だけ。シェアの文に切符の数字・式（答え）を出さない（🟩ヒントなし・🟨1回・🟧2回）。
+- 文字は少なめ・一画面一枚。お笑いの言葉は入れない（QA が見る）。ほかの作品の名前・キャラ・見た目は使わない。
+- 感想は「感想を送る」から GitHub の Issue フォーム（`.github/ISSUE_TEMPLATE/feedback.yml`、ラベル「感想」）を開くだけ。項目は shared-workflows の `template/.github/ISSUE_TEMPLATE/feedback.yml` と同じにし、名前・メールは聞かない。週1で shared-workflows `routines/game-feedback.md` が読んで直す。
+- 応援は Ko-fi（https://ko-fi.com/satouaaaaa）へのただのリンクだけ。今日の5枚・上級を初めて終えて全部ヒントなしのときだけ、結果の画面の下に1行（共有フォルダ kofi/app-guide.md）。遊ぶのは無料のまま、有料版は置かない。
+- 外へ通信しない。外から読むのは Google Fonts の文字だけ（CSP の `connect-src 'self'` を広げない）。記録は遊ぶ人のブラウザ（localStorage）だけ。
+- 同じ日はどの端末でも同じ問題にする：乱数は `sort` の比較の中で引かない（QA が見る）。少し遅れて動く処理（setTimeout）は、画面が替わっていたら何もしない。
+- 押せる所は高さ44px以上（QA が見る）。機能を足す・直すたびに `qa/run.mjs` に検査を足す。乱数で組む部分は何年分も作って確かめる（shared-workflows `incidents/2026-10-31-roppo-empty-village.md`）。
+- PWA（`manifest.webmanifest`・`sw.js`・`icon-*.png`）：画面のファイルを足したら `sw.js` の `SHELL` にも足し、中身を大きく変えたら `CACHE` の版を上げる。アイコンは `node tools/make-icons.cjs`、SNS 用の絵 `og.png` は `node tools/make-og.cjs`（今日の切符を入れない）。
+- 公開リポジトリなので、個人情報・鍵を入れない。
+
+## 公開
+
+- GitHub Pages は `main` のルート（`/`）を公開する。PR の QA と Secret scan が ✅ になると `automerge.yml` が自動でマージする。止めたいときは下書きにするか、ラベル「自動マージしない」を付ける。
+- `sw.js`・`manifest.webmanifest` を変える PR は自動ではマージされない（`hold_paths`）。CodeRabbit のレビューを待ち、手でマージする直前に今の head へのレビューを読み直す（shared-workflows `incidents/2026-11-01-roppo-merged-before-review.md`）。CodeRabbit は PR に `@coderabbitai review` とコメントして頼む。
+
+## 共通のきまり
+
+- PR の作り方・マージの仕方は satou-aaaaa/shared-workflows の `routines/pr.md`、全体のきまりは `routines/common.md` に従う。
+- CI の部品は shared-workflows の共通部品を呼ぶ。リポジトリ側の .github/workflows には呼び出しと設定値だけを書く。
+- Claude 以外の AI・人が作業するときは、shared-workflows の `routines/tool-map.md` と `routines/without-claude.md` を読む。
