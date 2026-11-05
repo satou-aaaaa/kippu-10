@@ -458,6 +458,12 @@ try {
 }
 check("画面のエラーが無い", errors.length === 0, errors.slice(0, 3).join(" | "));
 
+{ // 見やすさ・読みやすさ・偏り（shared-workflows template/qa/a11y.mjs の写し。routines/game-dev.md「だれでも遊べるように」）
+  const { spawnSync } = await import("node:child_process");
+  const a = spawnSync(process.execPath, [path.join(root, "qa", "a11y.mjs")], { encoding: "utf8", env: process.env });
+  check("見やすさ・読みやすさの検査（qa/a11y.mjs。中身は qa-report/a11y.md）", a.status === 0, (a.stdout.match(/^- ❌.*$/gm) || []).join(" / ") || (a.status ? a.stderr.slice(-300) : ""));
+}
+
 const ng = results.filter((r) => !r.ok);
 const md = `# きっぷで10 QA\n\n${results.map((r) => `- ${r.ok ? "✅" : "❌"} ${r.name}${r.detail ? `（${r.detail}）` : ""}`).join("\n")}\n\n${ng.length ? `❌ ${ng.length}件` : `✅ ${results.length}項目すべて通過`}\n`;
 mkdirSync(path.join(root, "qa-report"), { recursive: true });
