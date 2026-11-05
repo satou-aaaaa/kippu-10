@@ -41,7 +41,7 @@ check("README の URL のすぐ後ろに全角の字を続けない（Link check
 const ext = [...html.matchAll(/(?:src|href)="(https?:[^"]+)"/g)].map((m) => m[1]).filter((u) => !/^https:\/\/fonts\.googleapis\.com(\/|$)|^https:\/\/ko-fi\.com\/satouaaaaa$/.test(u));
 check("外から読むのは文字（Google Fonts）だけ。スクリプト・広告・解析を入れない", ext.length === 0, ext.join(","));
 check("CSP で通信先を自分だけにしている", /connect-src 'self'/.test(html) && !/connect-src[^;"]*https/.test(html));
-check("Math.random は練習の切符選びと練習の番号の種だけ（今日の5枚・上級・番号の並びは日付の乱数）", (html.match(/Math\.random/g) || []).length === 2);
+check("Math.random は練習・とことんの切符選びと番号の種だけ（今日の5枚・上級・番号の並びは日付の乱数）", (html.match(/Math\.random/g) || []).length === 4);
 check("画面にお笑いの言葉を入れない（本物っぽく）", !/お笑い|ギャグ|ボケ|ツッコミ|なんでやねん|（うそ）/.test(html));
 check("実在の鉄道会社の名前を使わない", !/JR|国鉄|東急|西武|東武|小田急|京王|京急|京成|阪急|阪神|近鉄|名鉄|南海|京阪|メトロ|都営/.test(html));
 { const og = (k) => (html.match(new RegExp(`<meta (?:property|name)="${k}" content="([^"]+)"`)) || [])[1] || "";
@@ -367,6 +367,25 @@ try {
     await pz.click('.cal button[data-k="2026-11-13"]');
     check("開いたまま日付が進んで過去7日から外れた日は、あとから始めない", !(await pz.evaluate(() => window.__kp.mode())).startsWith("a"));
     await pz.close(); }
+  { // とことん：次々に出る・やさしい→ふつう→むずかしい・ヒントは🎫を使う・降りると自己ベスト（2026-11-05 satou さん「一日で遊べる量が少なすぎる」）
+    const pe = await pageAt("2026-11-20", 390, base());
+    check("とことんの並び（300回）：やさしい5→ふつう10→むずかしい45、同じ切符は出ない", await pe.evaluate(() => { const g = window.__kp; for (let n = 0; n < 300; n++) { const L = g.endlessList(); if (L.length !== 60 || new Set(L).size !== 60) return false; const t = L.map((k) => g.info(k).t); if (!t.every((x, i) => x === (i < 5 ? 0 : i < 15 ? 1 : 2))) return false; } return true; }));
+    check("ホームに「とことん」の大きなボタン", (await pe.locator("#go-e.main").count()) === 1);
+    await pe.click("#go-e");
+    for (let j = 0; j < 3; j++) { await solveNow(pe); await pe.click("#next"); }
+    check("とことんは何枚目かを出し、🎫が3枚", (await pe.textContent("header")).includes("4枚目") && (await pe.evaluate(() => window.__kp.load().runs.e.life)) === 3);
+    await pe.click("#hint");
+    check("とことんのヒントは🎫を1枚使う", (await pe.evaluate(() => window.__kp.load().runs.e.life)) === 2);
+    await pe.click("#hint"); await pe.click("#back"); await pe.click("#go-e");
+    check("とことんは途中で閉じても続きから（4枚目・🎫1・ヒント2回のまま）", (await pe.textContent("header")).includes("4枚目") && (await pe.evaluate(() => window.__kp.load().runs.e.life)) === 1 && (await pe.evaluate(() => window.__kp.cur().hints)) === 2);
+    await pe.click("#quit");
+    check("降りると通した枚数と自己ベスト更新が出て、記録に残る（今日の記録・連続には入らない）", (await pe.textContent("#eres")).includes("3枚") && (await pe.textContent("#ebest")).includes("自己ベスト更新") && (await pe.evaluate(() => { const s = window.__kp.load(); return s.ebest === 3 && !s.runs.e && Object.keys(s.days).length === 0; })));
+    await pe.click("#go-e"); await pe.click("#quit");
+    check("ベストに届かないと、ベストと「あと何枚で更新」を出し、ベストは下げない", (await pe.textContent("#ebest")).includes("あと4枚で更新") && (await pe.evaluate(() => window.__kp.load().ebest)) === 3);
+    await pe.click("#go-e");
+    await pe.evaluate(() => { const k = "kippu-v1", s = JSON.parse(localStorage.getItem(k)); s.runs.e.life = 0; localStorage.setItem(k, JSON.stringify(s)); }); await pe.click("#back"); await pe.click("#go-e");
+    check("🎫が無いとヒントは押せない", await pe.locator("#hint").isDisabled());
+    await pe.close(); }
   { // 実績のあと：1回目の今日の5枚を終えると「初乗り」が出て、結果を開き直すと出ない
     const pf = await pageAt("2026-11-20", 390, base());
     await pf.click("#go-d"); for (let j = 0; j < 5; j++) { await solveNow(pf); await pf.click("#next"); }
@@ -377,6 +396,7 @@ try {
     await pf.click("#back"); await pf.click("#go-d");
     check("初めて今日の5枚を終えると結果に「🏅 実績：初乗り」、開き直すと出ない（うるさくしない）", a1.includes("初乗り") && a1.includes("ヒントなしの日") && (await pf.locator("#achnew").count()) === 0);
     check("今日の5枚の結果はシェアの文がある（あとからとは別）", (await pf.locator(".share").count()) === 1);
+    check("今日の5枚の結果に「続けて遊ぶ：とことん」の大きなボタン", (await pf.locator("#go-e.main").count()) === 1);
     await pf.close(); }
   { // 行き止まりの知らせ：残り2つは全部の切符、残り3つはやさしい・ふつうだけ（むずかしい・上級は出さない）
     const canF = (xs) => xs.length === 1 ? Math.abs(xs[0] - 10) < 1e-9 : xs.some((_, i) => xs.some((__, j) => i !== j && [(a, b) => a + b, (a, b) => a - b, (a, b) => a * b, (a, b) => (b === 0 ? NaN : a / b)].some((f) => { const v = f(xs[i], xs[j]); return Number.isFinite(v) && canF([...xs.filter((___, k) => k !== i && k !== j), v]); })));
