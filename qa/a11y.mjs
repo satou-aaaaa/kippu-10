@@ -147,6 +147,9 @@ for (const [label, settings] of [["ふつう", null], ["設定を全部入れた
       const { bad, measured } = await page.evaluate(contrastFn, skipSel);
       check(`文字のコントラストが 4.5:1 以上（大きい字は 3:1）：${sc.name}・${label}（WCAG 1.4.3）`, measured > 0 && bad.length === 0, bad.length ? `${bad.length}か所 ${bad.slice(0, 8).join(" / ")}` : `${measured}か所を測った`);
       check(`エラーが出ない：${sc.name}・${label}`, errors.length === 0, errors.join(" / "));
+      // 設定の印（html の class）で画面そのものがずれないか（2026-11-05 html.a11y-say にボタンの fixed が当たり、画面が左へずれた。incidents/2026-11-05-a11y-say-class-clash.md）
+      const lay = await page.evaluate(() => ({ pos: getComputedStyle(document.documentElement).position, wide: document.documentElement.scrollWidth > innerWidth + 1, left: Math.round(document.body.getBoundingClientRect().left) }));
+      check(`設定の印で画面がずれない・横にはみ出さない：${sc.name}・${label}`, lay.pos === "static" && !lay.wide && lay.left >= 0, JSON.stringify(lay));
     } catch (e) { check(`画面を開ける：${sc.name}・${label}`, false, e.message); }
     await ctx.close();
   }
