@@ -129,6 +129,7 @@ footer{margin-top:auto;text-align:center;font-size:12px;color:var(--ink2);displa
 footer a{color:var(--ink2);min-height:44px;display:inline-flex;align-items:center}
 /* 実績・カレンダー */
 .badge{background:var(--red);color:#fff;border-radius:9px;padding:1px 6px;font-size:12px;font-family:var(--f-num)}
+.achnext{text-align:center;font-size:13px;color:var(--ink2);margin:0}
 .achnew{text-align:center;font-size:14px;font-weight:700;color:var(--red2);margin:0;animation:up .35s ease-out}
 .agrp{font-size:13px;color:var(--ink2);margin:4px 0 -6px;font-weight:700;letter-spacing:.1em}
 .alist{display:flex;flex-direction:column;gap:8px}
@@ -255,6 +256,13 @@ const ACH = [
 ];
 const AGRP = ["腕前", "集める", "続ける"];
 const achGot = (s) => { const t = tally(s); return ACH.filter((a) => t[a[4]] >= a[5]).map((a) => a[0]); };
+// あと少しの実績：まだの実績のうち、いちばん目標に近いもの1つ（ゴールに近いほど人はがんばる。Kivetz ほか 2006）
+const AUNIT = { clean: "日", hard: "日", days: "日", late: "日", frac: "枚", dex: "枚", hardT: "枚", full: "枚", forms: "式" };
+function nextAch(s) {
+  const t = tally(s); let best = null;
+  for (const a of ACH) { const n = t[a[4]]; if (n <= 0 || n >= a[5]) continue; const r = n / a[5], left = a[5] - n; if (!best || r > best.r || (r === best.r && left < best.left)) best = { id: a[0], name: a[1], left, unit: AUNIT[a[4]] || "", r }; }
+  return best;
+}
 
 // ---- 画面 ----
 const md = (k) => `${+k.slice(5, 7)}/${+k.slice(8, 10)}`;
@@ -474,6 +482,7 @@ function result(mode, k, first, prec, newAch = []) {
     <header><button class="icon" id="back" aria-label="ホームへ">←</button><h1>きっぷで10<small>${mode === "d" ? `今日の5枚 #${dayNo(k)}` : late ? `#${dayNo(k)} あとから` : mode === "h" ? "上級：難所" : "練習"}</small></h1><span></span></header>
     <p class="big">${total === 0 ? "全部ヒントなしで通過！" : `${list.length}枚 通過（ヒント ${total}）`}</p>
     ${newAch.length ? `<p class="achnew" id="achnew">${newAch.map((id) => `🏅 実績：${ACH.find((a) => a[0] === id)[1]}`).join("<br>")}</p>` : ""}
+    ${(() => { const nx = nextAch(s); return nx ? `<p class="achnext" id="achnext">🎯 あと${nx.left}${nx.unit}で「${nx.name}」</p>` : ""; })()}
     <div class="rlist">${list.map((key, j) => { const inf = info(key); return `<div><span class="x">${key}</span><span class="w"><b>${esc(rec.f[j] || "")}</b><br>${starStr(starsOf(rec.h[j]))} ${mode === "h" ? "難所" : LV[inf.t]}・式${inf.ways}通り</span></div>`; }).join("")}</div>
     ${late ? `<p class="note">あとから遊んだ日は、カレンダーに ↺ で残ります（連続の日には数えません）。</p><button class="main alt" id="go-cal">カレンダーへ</button>` : ""}
     ${mode !== "p" && !late ? `<div class="share">${esc(text)}</div>
@@ -559,7 +568,7 @@ function cal(ym) {
   bindFooter(); window.scrollTo(0, 0);
 }
 
-window.__kp = { mode: () => MODE, runKey, D, ALL, info, dailyList, hardList, numberOf, handOf, starsOf, seedOf, todayKey, dayNo, shareText, streak, load, lateDays, ACH, achGot, tally, canTen, cal, cur: () => cur, play: (m) => { if (m) MODE = m; play(); } };
+window.__kp = { mode: () => MODE, runKey, D, ALL, info, dailyList, hardList, numberOf, handOf, starsOf, seedOf, todayKey, dayNo, shareText, streak, load, lateDays, ACH, achGot, nextAch, tally, canTen, cal, cur: () => cur, play: (m) => { if (m) MODE = m; play(); } };
 home();
 if ("serviceWorker" in navigator && location.protocol === "https:" && /github\.io$/.test(location.hostname)) navigator.serviceWorker.register("sw.js").catch(() => {});
 </script>
