@@ -161,7 +161,7 @@ footer a{color:var(--ink2);min-height:44px;display:inline-flex;align-items:cente
 /* all:unset のボタン（カレンダーのます目など）でも枠が消えないよう、いちばん最後に強く書く（2026-11-04 CodeRabbit） */
 :is(.icon,button,a):focus-visible{outline:2px solid var(--red)!important;outline-offset:2px}
 </style>
-<!-- a11y:begin 見やすさの設定 v1（shared-workflows template/a11y/a11y.html の写し。ここでは直さず、ひな形を直して全部のゲームへ写す。drift-check と qa/a11y.mjs が同じ中身か見る） -->
+<!-- a11y:begin 見やすさの設定 v2（shared-workflows template/a11y/a11y.html の写し。ここでは直さず、ひな形を直して全部のゲームへ写す。drift-check と qa/a11y.mjs が同じ中身か見る） -->
 <style id="a11y-css">
 /* だれでも：キーボードで選んだ所に太い枠（WCAG 2.4.7・2.4.13） */
 :is(button,a,input,select,textarea,summary,[tabindex]):focus-visible{outline:3px solid #1a5fd0!important;outline-offset:2px!important;box-shadow:0 0 0 5px #fff!important}
@@ -185,11 +185,11 @@ html:not(.a11y-ruby) ruby.a11y-rb>rt{display:none}
 .a11y-dlg label small{display:block;font-size:13px;color:#3d4440}
 .a11y-dlg input[type=checkbox]{width:26px;height:26px;flex:none;accent-color:#1a5fd0;margin:0}
 .a11y-dlg .a11y-row{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
-.a11y-dlg button,.a11y-btn,.a11y-say{min-height:44px;min-width:44px;border-radius:10px;border:2px solid #1d2320;background:#fff;color:#1d2320;font:700 15px/1.2 "BIZ UDPGothic","Hiragino Sans","Yu Gothic UI",Meiryo,sans-serif;padding:0 14px;cursor:pointer;letter-spacing:0}
+.a11y-dlg button,.a11y-btn,.a11y-saybtn{min-height:44px;min-width:44px;border-radius:10px;border:2px solid #1d2320;background:#fff;color:#1d2320;font:700 15px/1.2 "BIZ UDPGothic","Hiragino Sans","Yu Gothic UI",Meiryo,sans-serif;padding:0 14px;cursor:pointer;letter-spacing:0}
 .a11y-dlg button.a11y-ok{background:#1d2320;color:#fff}
 .a11y-btn.a11y-float{position:fixed;left:max(8px,env(safe-area-inset-left,0px));bottom:max(8px,env(safe-area-inset-bottom,0px));z-index:2147483000}
-.a11y-say{position:fixed;right:max(8px,env(safe-area-inset-right,0px));bottom:max(8px,env(safe-area-inset-bottom,0px));z-index:2147483000;box-shadow:0 2px 8px #0003}
-.a11y-say[hidden],.a11y-dlg [hidden]{display:none!important}
+.a11y-saybtn{position:fixed;right:max(8px,env(safe-area-inset-right,0px));bottom:max(8px,env(safe-area-inset-bottom,0px));z-index:2147483000;box-shadow:0 2px 8px #0003}
+.a11y-saybtn[hidden],.a11y-dlg [hidden]{display:none!important}
 .a11y-note{font-size:13px!important}
 </style>
 <script id="a11y-script">
@@ -200,7 +200,8 @@ html:not(.a11y-ruby) ruby.a11y-rb>rt{display:none}
    - 読み上げる文に data-a11y-say を付ける（問題文・知らせなど）
    - 色の見分けを助ける形・模様は html.a11y-cvd の下に CSS で書く。JS では A11y.on('cvd')
    - 揺れ・すべる動きを JS で動かすときは、A11y.on('calm') なら止める
-   - 設定が変わると document に a11ychange が届く */
+   - 設定が変わると document に a11ychange が届く
+   - 設定の印は html の class「a11y-<設定の名前>」（a11y-read など）。部品の class はこれと重ならない名前にする（2026-11-05 a11y-say がボタンとぶつかった） */
 (() => {
   const KEY = "a11y-v1";
   const root = document.documentElement;
@@ -273,7 +274,7 @@ html:not(.a11y-ruby) ruby.a11y-rb>rt{display:none}
     dlg.querySelector("[data-a11y-close]").addEventListener("click", () => dlg.close());
     dlg.addEventListener("close", () => { if (lastFocus && lastFocus.focus) lastFocus.focus(); });
     sayBtn = document.createElement("button");
-    sayBtn.type = "button"; sayBtn.className = "a11y-say"; sayBtn.textContent = "🔊 読む"; sayBtn.setAttribute("aria-label", "画面の問題を読み上げる");
+    sayBtn.type = "button"; sayBtn.className = "a11y-saybtn"; sayBtn.textContent = "🔊 読む"; sayBtn.setAttribute("aria-label", "画面の問題を読み上げる");
     sayBtn.addEventListener("click", () => {
       try { if (speechSynthesis.speaking) return stop(); } catch { /* 無い端末 */ }
       if (!say(sayText())) open();
