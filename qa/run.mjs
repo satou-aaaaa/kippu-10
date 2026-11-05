@@ -371,6 +371,9 @@ try {
     const pf = await pageAt("2026-11-20", 390, base());
     await pf.click("#go-d"); for (let j = 0; j < 5; j++) { await solveNow(pf); await pf.click("#next"); }
     const a1 = await pf.textContent("#achnew").catch(() => "");
+    const nx1 = await pf.textContent("#achnext").catch(() => "");
+    check("結果に「あと少しの実績」を1つだけ出す（全部ヒントなし1日目なら、いちばん近い「まっすぐ5日」：あと4日）", nx1.includes("🎯 あと4日で「まっすぐ5日」") && (await pf.locator("#achnext").count()) === 1);
+    check("あと少しの実績：まだの実績のうち目標にいちばん近いものを選び、取った実績・0のものは選ばない", await pf.evaluate(() => { const g = window.__kp, s = g.load(), t = g.tally(s), nx = g.nextAch(s); const cand = g.ACH.filter((a) => t[a[4]] > 0 && t[a[4]] < a[5]); return !!nx && cand.every((a) => t[a[4]] / a[5] <= nx.r + 1e-12) && !g.achGot(s).includes(nx.id) && g.nextAch({ days: {}, hdays: {}, adays: {}, dex: {}, found: {} }) === null; }));
     await pf.click("#back"); await pf.click("#go-d");
     check("初めて今日の5枚を終えると結果に「🏅 実績：初乗り」、開き直すと出ない（うるさくしない）", a1.includes("初乗り") && a1.includes("ヒントなしの日") && (await pf.locator("#achnew").count()) === 0);
     check("今日の5枚の結果はシェアの文がある（あとからとは別）", (await pf.locator(".share").count()) === 1);
