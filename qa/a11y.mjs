@@ -10,6 +10,7 @@
 //   7. 知らせを読み上げソフトに伝える場所（aria-live / role=status）がある（WCAG 4.1.3）
 //   8. 斜体の日本語が無い（BDA Dyslexia Style Guide）
 //   9. 役割や性別を決めつける言葉が無い（words は下の WORDS。ユネスコの教材のジェンダー指針）
+//  11. はじめに読むファイル（index.html と同じサイトの script）が 1.5MB 以下（遅い回線・古い端末。game-dev.md A12）
 //  10. 色覚（P型・D型・T型）の見え方の絵を qa-report/ に出す（人と AI が目で見る。色だけで分けていないかは各ゲームの qa/run.mjs が見る）
 // ゲームごとの許し・追加の画面は qa/a11y.json（無くてよい）:
 //   { "screens": [{ "name": "遊ぶ画面", "click": ["#go-d"] }],          // ホームのほかに測る画面（順に押す）
@@ -62,6 +63,13 @@ for (const f of textFiles) {
   }
 }
 check("役割・性別を決めつける言葉が無い（ユネスコの教材のジェンダー指針。言いかえは shared-workflows routines/game-dev.md）", hits.length === 0, hits.join(" / "));
+
+// 11. 重さ（index.html と、そこから読む同じサイトの script の合計）
+{
+  const srcs = [...html.matchAll(/<script[^>]*\bsrc="(?!https?:|\/\/)([^"?#]+)/g)].map((m) => m[1]);
+  const size = [html, ...srcs.filter((s) => existsSync(path.join(root, s))).map((s) => readFileSync(path.join(root, s)))].reduce((a, b) => a + Buffer.byteLength(b), 0);
+  check("はじめに読むファイルが 1.5MB 以下（遅い回線・古い端末でも開ける。game-dev.md A12）", size <= 1.5 * 1024 * 1024, `${Math.round(size / 1024)}KB`);
+}
 
 // ブラウザで見る
 const { chromium } = await import("playwright");
