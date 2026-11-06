@@ -515,7 +515,7 @@ function play() {
   const s = load(), run = s.runs[MODE];
   if (!run) return home();
   const i = run.res.length;
-  if (run.mode === "e" && i >= run.list.length) { save((s2) => { const r = s2.runs.e; if (r && r.id === run.id && r.res.length >= r.list.length) r.list = r.list.concat(endlessList(s2)); }); return play(); } // とことんは使い切ったら新しい並びをつなげて続ける（好きなだけ遊べる）
+  if (run.mode === "e" && i >= run.list.length) { save((s2) => { const r = s2.runs.e; if (r && r.id === run.id && r.res.length >= r.list.length) { const played = new Set(r.list), nx = endlessList(s2); r.list = r.list.concat(nx.filter((k) => !played.has(k)), nx.filter((k) => played.has(k))); } }); return play(); } /* この回でもう出した切符は後ろへ（前の版の回は seen の印が無いため。2026-11-06 CodeRabbit） */ // とことんは使い切ったら新しい並びをつなげて続ける（好きなだけ遊べる）
   if (i >= run.list.length) return finish();
   if (run.mode === "a" && s.days[run.date]) { save((s2) => { s2.runs[MODE] = null; }); toast("この日は別の画面で遊び終えています"); return home(); } // 別のタブでその日の今日の5枚を終えたら、あとからの回は止める（2026-11-04 CodeRabbit）
   const key = run.list[i], no = numberOf(key, run.mode === "p" || run.mode === "e" ? run.id + ":" + i : run.date + ":" + (run.mode === "a" ? "d" : run.mode) + ":" + i), hard = run.mode === "h"; // あとからは、その日の今日の5枚と同じ番号

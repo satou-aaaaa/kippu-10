@@ -397,6 +397,7 @@ try {
     await pe.evaluate(() => { const g = window.__kp, k = "kippu-v1", s = JSON.parse(localStorage.getItem(k)); const L = g.endlessList(s).slice(0, 2); s.runs.e = { mode: "e", date: g.todayKey(), list: L, res: L.map(() => ({ h: 2, f: "" })), cur: null, life: 0, id: "old", a0: [] }; localStorage.setItem(k, JSON.stringify(s)); });
     await pe.click("#go-e");
     check("前の版の回（life 0・並びを使い切った）でも、とことんは終わらず3枚目が出て、ヒントも押せる", (await pe.textContent("header")).includes("3枚目") && !(await pe.locator("#hint").isDisabled()) && (await pe.evaluate(() => { const r = window.__kp.load().runs.e; return r.list.length === 2 + window.__kp.ALL.length; })));
+    check("前の版の回でもう出した切符は、つなげた並びの後ろに回す（すぐ同じ切符が出ない）", await pe.evaluate(() => { const L = window.__kp.load().runs.e.list, a = L.slice(0, 2), tail = L.slice(-2); return a.every((k) => tail.includes(k) && L.indexOf(k, 2) >= L.length - 2); }));
     await pe.close(); }
   { // 好きなだけ遊べる：🔒で開くモード・チケット・回数制限を入れない。Ko-fi は結果の画面の1行と、下のリンクだけ（2026-11-06 satou さん）
     const pg = await pageAt("2026-11-20", 390, base());
@@ -479,7 +480,7 @@ try {
     await pf.close();
   } catch (e) { check("キーボードで選んだボタン（カレンダーのあとから遊ぶ日も）に枠が出る", false, e.message.split("\n")[0]); }
   try { // 引き継ぎコード（別の端末へ記録を移す。shared-workflows template/qa/transfer-check.mjs）
-    await checkTransfer({ browser, url, game: "kippu-10", sample: { "kippu-v1": JSON.stringify({ v: 1, tut: true }) }, check, open: async (p) => { await p.click("#howto-ok", { timeout: 1500 }).catch(() => {}); } });
+    await checkTransfer({ browser, url, game: "kippu-10", sample: { "kippu-v1": JSON.stringify({ v: 1, tut: true, seen: { "0019": 1, "0025": 1 } }) }, check, open: async (p) => { await p.click("#howto-ok", { timeout: 1500 }).catch(() => {}); } });
   } catch (e) { check("引き継ぎコード", false, e.message.split("\n")[0]); }
   await browser.close();
 }
