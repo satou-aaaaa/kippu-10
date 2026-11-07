@@ -446,6 +446,27 @@ try {
     const left = await pd.evaluate(() => { const c = window.__kp.cur(); return window.__kp.handOf(c.no, c.steps).filter(Boolean).map((x) => x.v.n / x.v.d); });
     check("上級（むずかしい）：残り3つでは知らせず自分で気づく・残り2つで10にならないときだけ知らせる", h3 === 0 && (canF(left) ? true : (await pd.locator("#after .dead").count()) === 1), `${no} ${left.join(",")}`);
     await pd.close(); }
+  // 2026-11-07 スマホでの遊びやすさ（はじめての人がつまずく所）
+  for (const [w, h] of [[320, 640], [390, 844]]) {
+    const pu = await newPage(w, h);
+    check(`幅${w}px：遊び方を開くと「わかった」に枠がある（感想のリンクではなく）`, await pu.evaluate(() => document.activeElement && document.activeElement.id === "howto-ok"));
+    await pu.click("#howto-ok");
+    const fold = (sel) => pu.evaluate((q) => { const e = document.querySelector(q); if (!e) return null; const r = e.getBoundingClientRect(); return r.bottom + scrollY <= innerHeight + 1; }, sel);
+    check(`${w}×${h}：ホームの「今日の5枚に挑む」は最初の画面に入る`, await fold("#go-d"));
+    check(`幅${w}px：ホームの小さいボタン（練習・切符帳など）は1行に収まる`, await pu.evaluate(() => [...document.querySelectorAll(".row>.sub")].every((b) => b.getBoundingClientRect().height <= 50 && b.scrollWidth <= b.clientWidth + 1)));
+    await pu.click("#go-d");
+    await solveNow(pu);
+    const sv = await pu.evaluate(() => ({ ops: !!document.querySelector("#ops").offsetParent, ctl: [...document.querySelectorAll(".ctl")].some((e) => e.offsetParent), cap: document.querySelector("#tk .bot").textContent.includes("10になれば") }));
+    check(`${w}×${h}：通過したら使い終えた＋−×÷・戻すの段を畳み、「次の切符へ」が最初の画面に入る`, !sv.ops && !sv.ctl && (await fold("#next")), JSON.stringify(sv));
+    check(`幅${w}px：判子を押した切符では「10になれば通れます」を消す（判子と重ならない）`, !sv.cap && (await pu.locator("#tk .stamp").count()) === 1);
+    await pu.click("#next");
+    check(`幅${w}px：次の切符では＋−×÷・戻すの段がまた出る`, await pu.evaluate(() => !!document.querySelector("#ops").offsetParent && [...document.querySelectorAll(".ctl")].every((e) => e.offsetParent)));
+    for (let j = 1; j < 5; j++) { await solveNow(pu); await pu.click("#next"); }
+    const ord = await pu.evaluate(() => { const e = document.querySelector("#go-e"), sh = document.querySelector(".share"); return e && sh && e.getBoundingClientRect().top < sh.getBoundingClientRect().top && e.classList.contains("main") && !document.querySelector("#share").classList.contains("main"); });
+    check(`幅${w}px：今日の結果は「続けて遊ぶ：とことん」をシェアより上に、大きなボタンで置く`, ord);
+    if (h >= 844) check(`${w}×${h}：今日の結果の「続けて遊ぶ：とことん」は最初の画面に入る`, await fold("#go-e"));
+    await pu.close();
+  }
   { // 320px・390px：ホーム・実績・カレンダー・結果が横にはみ出さず、押せる所は44px以上
     const st = base(); st.days["2026-11-19"] = { h: [0, 0, 0, 0, 0], f: [] }; st.adays["2026-11-15"] = { h: [1, 0, 0, 0, 0], f: [] };
     mkdirSync(path.join(root, "qa-report"), { recursive: true });

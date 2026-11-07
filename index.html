@@ -49,6 +49,8 @@ button.main.alt{background:var(--ink);box-shadow:0 4px 0 #000}
 button.sub,a.sub{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;min-height:46px;border-radius:12px;border:1px solid var(--line);background:var(--paper);color:var(--ink);font-weight:700;font-size:15px;padding:0 12px;text-align:center}
 button.sub:disabled{opacity:.4;cursor:default}
 .row{display:flex;gap:10px}.row>.sub,.row>.main{flex:1 1 0}
+.row>.sub{white-space:nowrap;padding:0 8px;font-size:clamp(13px,4.2vw,15px)}
+#ops[hidden],.ctl[hidden],.tutnote[hidden]{display:none}
 .note{color:var(--ink2);font-size:13px;line-height:1.6;margin:0;text-align:center}
 .note a{color:var(--red2);display:inline-flex;align-items:center;min-height:44px}
 /* 切符 */
@@ -323,7 +325,7 @@ html.a11y-say body{padding-bottom:calc(64px + env(safe-area-inset-bottom,0px))!i
   <p>例：1・2・3・4 なら 1＋2＋3＋4＝10。とちゅうで分数やマイナスになってもかまいません。</p>
   <p>今日の5枚はだれでも同じで1日1回。練習と「とことん」は好きなだけ遊べます。時間制限はありません。</p>
   <p><a id="fb2" target="_blank" rel="noopener">感想を送る</a></p>
-  <button class="main" id="howto-ok" style="width:100%">わかった</button>
+  <button class="main" id="howto-ok" style="width:100%" autofocus>わかった</button>
 </dialog>
 <script src="ten.js"></script>
 <script src="data.js"></script>
@@ -429,7 +431,7 @@ const footer = () => `<footer><a href="#" id="f-how">遊び方</a><a href="#" da
 function bindFooter() { const h = $("f-how"); if (h) h.onclick = (e) => { e.preventDefault(); openHow(); }; }
 function openHow() { $("fb2").href = FEEDBACK; const d = $("howto"); if (d.showModal) d.showModal(); else d.setAttribute("open", ""); }
 $("howto-ok").onclick = () => { const d = $("howto"); d.close ? d.close() : d.removeAttribute("open"); save((s) => { s.tut = true; }); };
-const ticketHtml = (no, top, bot, extra = "") => `<div class="ticket" role="img" aria-label="切符の番号 ${no.split("").join(" ")}"><div class="top"><span>${top}</span><span>乗車券</span></div><div class="no">${no}</div><div class="bot"><span>${bot}</span><span>10になれば通れます</span></div>${extra}</div>`;
+const ticketHtml = (no, top, bot, extra = "") => `<div class="ticket" role="img" aria-label="切符の番号 ${no.split("").join(" ")}"><div class="top"><span>${top}</span><span>乗車券</span></div><div class="no">${no}</div><div class="bot"><span>${bot}</span><span>${extra ? "" : "10になれば通れます"}</span></div>${extra}</div>`;
 
 function home() {
   const s = load(), k = todayKey(), done = s.days[k], hdone = s.hdays[k];
@@ -532,11 +534,11 @@ function play() {
     <div class="cards" id="cards"></div>
     <div class="ops" id="ops">${TEN.OPS.map((o) => `<button class="op" data-op="${o}" aria-label="${{ "+": "たす", "-": "ひく", "×": "かける", "÷": "わる" }[o]}">${o === "-" ? "−" : o}</button>`).join("")}</div>
     <div class="log" id="log" aria-live="polite" data-a11y-say></div>
-    <div class="row"><button class="sub" id="undo">1つ戻す</button><button class="sub" id="reset">最初から</button>${hard ? "" : `<button class="sub" id="hint">ヒント</button>`}</div>
-    ${run.mode === "e" ? `<button class="sub" id="quit" style="width:100%">ここで降りる（${i}枚で終える）</button>` : ""}
+    <div class="row ctl"><button class="sub" id="undo">1つ戻す</button><button class="sub" id="reset">最初から</button>${hard ? "" : `<button class="sub" id="hint">ヒント</button>`}</div>
+    ${run.mode === "e" ? `<button class="sub ctl" id="quit" style="width:100%">ここで降りる（${i}枚で終える）</button>` : ""}
     <div id="hintbox"></div>
     <div id="after"></div>
-    ${!s.tut || (Object.keys(s.dex).length === 0 && i === 0) ? `<p class="note">数字 → ＋−×÷ → 数字 の順に押すと、2つが1つになります。</p>` : ""}`;
+    ${!s.tut || (Object.keys(s.dex).length === 0 && i === 0) ? `<p class="note tutnote">数字 → ＋−×÷ → 数字 の順に押すと、2つが1つになります。</p>` : ""}`;
   $("back").onclick = home;
   document.querySelectorAll(".op").forEach((b) => (b.onclick = () => chooseOp(b.dataset.op)));
   $("undo").onclick = undo; $("reset").onclick = reset;
@@ -605,6 +607,7 @@ function check(hand) {
   document.querySelectorAll(".op").forEach((b) => (b.disabled = true));
   $("undo").disabled = $("reset").disabled = true; if ($("hint")) $("hint").disabled = true;
   $("hintbox").innerHTML = "";
+  document.querySelectorAll("#ops,.ctl,.tutnote").forEach((e) => (e.hidden = true)); // 使い終えた＋−×÷・戻すの段を畳み、通過の知らせと「次へ」を上へ寄せる（次の切符で描き直す）
   const r = s.runs[MODE], fin = r && r.mode !== "e" && r.res.length >= r.list.length;
   $("after").innerHTML = `<div class="verdict" role="status">
     <div class="hd">通過！ ${starStr(st)}</div>
@@ -668,13 +671,14 @@ function result(mode, k, first, prec, newAch = []) {
     ${newAch.length ? `<p class="achnew" id="achnew">${newAch.map((id) => `🏅 実績：${ACH.find((a) => a[0] === id)[1]}`).join("<br>")}</p>` : ""}
     ${(() => { const nx = nextAch(s); return nx ? `<p class="achnext" id="achnext">🎯 あと${nx.left}${nx.unit}で「${nx.name}」</p>` : ""; })()}
     <div class="rlist">${list.map((key, j) => { const inf = info(key); return `<div><span class="x">${key}</span><span class="w"><b>${esc(rec.f[j] || "")}</b><br>${starStr(starsOf(rec.h[j]))} ${mode === "h" ? "難所" : LV[inf.t]}・式${inf.ways}通り</span></div>`; }).join("")}</div>
-    ${late ? `<p class="note">あとから遊んだ日は、カレンダーに ↺ で残ります（連続の日には数えません）。</p><button class="main alt" id="go-cal">カレンダーへ</button>` : ""}
-    ${mode !== "p" && !late ? `<div class="share">${esc(text)}</div>
-    <button class="main" id="share">結果をシェア</button>
-    <div class="shares"><a id="toX" target="_blank" rel="noopener">Xで投稿</a><a id="toLine" target="_blank" rel="noopener">LINEで送る</a><button id="copy">コピー</button></div>
-    <p class="note">🟩ヒントなし　🟨ヒント1回　🟧ヒント2回<br>次の5枚まで あと <b>${untilNext()}</b></p>` : ""}
+    <!-- 「もう1回」を先に：続けて遊ぶボタンは、切符の一覧のすぐ下（シェアより上）に置く -->
     ${mode !== "p" ? `<button class="main" id="go-e">続けて遊ぶ：とことん${s.ebest ? `（ベスト ${s.ebest}枚）` : ""}</button>` : ""}
     ${mode === "d" && k === todayKey() && !s.hdays[k] ? `<button class="main alt" id="go-h">上級：難所の3枚に挑む</button>` : ""}
+    ${late ? `<p class="note">あとから遊んだ日は、カレンダーに ↺ で残ります（連続の日には数えません）。</p><button class="main alt" id="go-cal">カレンダーへ</button>` : ""}
+    ${mode !== "p" && !late ? `<div class="share">${esc(text)}</div>
+    <button class="sub" id="share">結果をシェア</button>
+    <div class="shares"><a id="toX" target="_blank" rel="noopener">Xで投稿</a><a id="toLine" target="_blank" rel="noopener">LINEで送る</a><button id="copy">コピー</button></div>
+    <p class="note">🟩ヒントなし　🟨ヒント1回　🟧ヒント2回<br>次の5枚まで あと <b>${untilNext()}</b></p>` : ""}
     <div class="row"><button class="sub" id="go-p">練習する</button><button class="sub" id="go-dex">切符帳を見る</button></div>
     ${showKofi ? `<p class="note kofi">楽しめたら、<a href="https://ko-fi.com/satouaaaaa" target="_blank" rel="noopener">Ko-fi でコーヒー1杯の応援</a>をもらえると、新しいゲームづくりの励みになります（任意・遊ぶのはずっと無料）。</p>` : ""}
     <p class="note"><a href="${FEEDBACK}" target="_blank" rel="noopener">感想を送る</a></p>`;
