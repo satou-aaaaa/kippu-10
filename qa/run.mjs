@@ -453,12 +453,12 @@ try {
     await pu.click("#howto-ok");
     const fold = (sel) => pu.evaluate((q) => { const e = document.querySelector(q); if (!e) return null; const r = e.getBoundingClientRect(); return r.bottom + scrollY <= innerHeight + 1; }, sel);
     check(`${w}×${h}：ホームの「今日の5枚に挑む」は最初の画面に入る`, await fold("#go-d"));
-    check(`幅${w}px：ホームの小さいボタン（練習・切符帳など）は1行に収まる`, await pu.evaluate(() => [...document.querySelectorAll(".row>.sub")].every((b) => b.getBoundingClientRect().height <= 50 && b.scrollWidth <= b.clientWidth + 1)));
+    check(`幅${w}px：ホームの小さいボタン（練習・切符帳など）の文字は1行に収まる`, await pu.evaluate(() => [...document.querySelectorAll(".row>.sub")].every((b) => { const rg = document.createRange(); rg.selectNodeContents(b); const qs = [...rg.getClientRects()].filter((q) => q.width > 0); return qs.length > 0 && Math.max(...qs.map((q) => q.top)) < Math.min(...qs.map((q) => q.bottom)) && b.scrollWidth <= b.clientWidth + 1; })));
     await pu.click("#go-d");
     await solveNow(pu);
     const sv = await pu.evaluate(() => ({ ops: !!document.querySelector("#ops").offsetParent, ctl: [...document.querySelectorAll(".ctl")].some((e) => e.offsetParent), cap: document.querySelector("#tk .bot").textContent.includes("10になれば") }));
     check(`${w}×${h}：通過したら使い終えた＋−×÷・戻すの段を畳み、「次の切符へ」が最初の画面に入る`, !sv.ops && !sv.ctl && (await fold("#next")), JSON.stringify(sv));
-    check(`幅${w}px：判子を押した切符では「10になれば通れます」を消す（判子と重ならない）`, !sv.cap && (await pu.locator("#tk .stamp").count()) === 1);
+    check(`幅${w}px：判子を押した切符では「10になれば通れます」を消す（判子と重ならない）`, !sv.cap && (await pu.locator("#tk .stamp").count()) === 1 && (await pu.locator("#tk .stamp").isVisible()));
     await pu.click("#next");
     check(`幅${w}px：次の切符では＋−×÷・戻すの段がまた出る`, await pu.evaluate(() => !!document.querySelector("#ops").offsetParent && [...document.querySelectorAll(".ctl")].every((e) => e.offsetParent)));
     for (let j = 1; j < 5; j++) { await solveNow(pu); await pu.click("#next"); }
@@ -466,6 +466,31 @@ try {
     check(`幅${w}px：今日の結果は「続けて遊ぶ：とことん」をシェアより上に、大きなボタンで置く`, ord);
     if (h >= 844) check(`${w}×${h}：今日の結果の「続けて遊ぶ：とことん」は最初の画面に入る`, await fold("#go-e"));
     await pu.close();
+  }
+  { // とことん：通過したあとも「ここで降りる」が出て、いま通した切符も数えて終える（2026-11-07 CodeRabbit）
+    const pq = await newPage(320, 640);
+    await pq.click("#howto-ok"); await pq.click("#go-e");
+    check("とことん：通す前の「ここで降りる」は0枚で終える", (await pq.textContent("#quit")).includes("0枚で終える"));
+    await solveNow(pq);
+    const qv = await pq.evaluate(() => ({ quit: !!document.querySelector("#quit").offsetParent, ops: !!document.querySelector("#ops").offsetParent, ctl: [...document.querySelectorAll(".ctl")].some((e) => e.offsetParent), t: document.querySelector("#quit").textContent }));
+    check("とことん：通過したら＋−×÷・戻すの段は畳み、「ここで降りる」は残して通した枚数（1枚）で終えると出す", qv.quit && !qv.ops && !qv.ctl && qv.t.includes("1枚で終える"), JSON.stringify(qv));
+    await pq.click("#quit");
+    check("とことん：通過してすぐ降りると、いま通した切符も数える（1枚 通過・自己ベスト1）", (await pq.textContent("#eres")).includes("1枚") && (await pq.evaluate(() => { const s = window.__kp.load(); return s.ebest === 1 && !s.runs.e; })));
+    await pq.close();
+  }
+  { // 幅160px（320pxを200%に拡大）でも、ボタンが画面の外にはみ出さず、44px以上で押せる（2026-11-07 CodeRabbit）
+    const pn = await newPage(160, 640);
+    await pn.click("#howto-ok");
+    const over = () => pn.evaluate(() => [...document.querySelectorAll("button,a.sub,a.main")].filter((b) => b.offsetParent && !b.closest("dialog")).filter((b) => { const q = b.getBoundingClientRect(); return q.left < -1 || q.right > innerWidth + 1 || q.height < 44 || b.scrollWidth > b.clientWidth + 1; }).map((b) => b.id || b.textContent.trim().slice(0, 12)));
+    const o1 = await over();
+    check("幅160px：ホームのボタンは画面の外にはみ出さない", o1.length === 0, o1.join(","));
+    await pn.click("#go-d");
+    const o2 = await over();
+    check("幅160px：遊ぶ画面（1つ戻す・最初から・ヒント）は画面の外にはみ出さない", o2.length === 0, o2.join(","));
+    await pn.click("#back"); await pn.click("#go-e");
+    const o3 = await over();
+    check("幅160px：とことんの画面（ここで降りる）も画面の外にはみ出さない", o3.length === 0, o3.join(","));
+    await pn.close();
   }
   { // 320px・390px：ホーム・実績・カレンダー・結果が横にはみ出さず、押せる所は44px以上
     const st = base(); st.days["2026-11-19"] = { h: [0, 0, 0, 0, 0], f: [] }; st.adays["2026-11-15"] = { h: [1, 0, 0, 0, 0], f: [] };
