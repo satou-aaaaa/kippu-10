@@ -561,7 +561,9 @@ function play() {
   window.scrollTo(0, 0);
 }
 const same = (r) => r && cur && r.date === cur.date && r.id === cur.id && r.res.length === cur.i && r.list[cur.i] === cur.key; // 保存した進み具合が、この画面と同じ切符か
-function keep() { save((s) => { const r = s.runs[MODE]; if (same(r)) { const was = r.cur && r.cur.i === cur.i && r.cur.key === cur.key ? r.cur.hints || 0 : 0; cur.hints = Math.max(cur.hints, was); r.cur = { i: cur.i, key: cur.key, steps: cur.steps.map((x) => x.slice()), hints: cur.hints }; } }); } // ヒントの数は、別のタブで使った分も減らさない
+// まちがえた・ヒントを使ったその時に復習へ入れる（とことんで降りる・閉じるなど、解き終えずにやめても残る。2026-11-11 CodeRabbit）
+function early() { if (cur && !cur.done && ((cur.wrong && cur.wrong.length) || cur.hints || (cur.w2 && cur.w2.length))) Depth.mark(cur.key, 1, cur.key); }
+function keep() { early(); save((s) => { const r = s.runs[MODE]; if (same(r)) { const was = r.cur && r.cur.i === cur.i && r.cur.key === cur.key ? r.cur.hints || 0 : 0; cur.hints = Math.max(cur.hints, was); r.cur = { i: cur.i, key: cur.key, steps: cur.steps.map((x) => x.slice()), hints: cur.hints }; } }); } // ヒントの数は、別のタブで使った分も減らさない
 function paint() {
   const hand = handOf(cur.no, cur.steps);
   $("cards").innerHTML = hand.map((c, j) => c ? `<button class="cardn${c.v.d !== 1 ? " fracn" : ""}${pick.a === j ? " sel" : ""}${made === j ? " made" : ""}" data-j="${j}" aria-label="${TEN.fstr(c.v)}" aria-pressed="${pick.a === j}">${TEN.fstr(c.v)}</button>` : `<button class="cardn gone" tabindex="-1" aria-hidden="true"></button>`).join("");

@@ -429,6 +429,7 @@ try {
     check("とことんで通した切符に印（seen）が付く", await pe.evaluate(() => { const s = window.__kp.load(); return s.runs.e.list.slice(0, 3).every((k) => s.seen[k]); }));
     await pe.click("#hint");
     check("とことんのヒントは何も減らさず、続けて2回目も押せる", !(await pe.locator("#hint").isDisabled()) && (await pe.evaluate(() => window.__kp.cur().hints)) === 1);
+    check("ヒントを使ったその時に復習へ入る（降りても残る。2026-11-11 CodeRabbit）", await pe.evaluate(() => { const d = JSON.parse(localStorage.getItem("kippu-depth") || "{}"); return !!(d.rv && d.rv[window.__kp.cur().key]); }));
     await pe.click("#hint"); await pe.click("#back"); await pe.click("#go-e");
     check("とことんは途中で閉じても続きから（4枚目・ヒント2回のまま）", (await pe.textContent("header")).includes("4枚目") && (await pe.evaluate(() => window.__kp.cur().hints)) === 2);
     await solveNow(pe);
