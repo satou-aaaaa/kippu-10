@@ -8,6 +8,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import path from "node:path";
 import { checkTransfer } from "./transfer-check.mjs";
 import { checkSwStall } from "./sw-check.mjs";
+import { checkDepth } from "./depth-check.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const url = pathToFileURL(path.join(root, "index.html")).href;
@@ -55,7 +56,7 @@ check("実在の鉄道会社の名前を使わない", !/JR|国鉄|東急|西武
 { const sw = readFileSync(path.join(root, "sw.js"), "utf8"), mf = JSON.parse(readFileSync(path.join(root, "manifest.webmanifest"), "utf8"));
   { const st = await checkSwStall(sw); check("PWA：本文の途中で通信が止まっても4秒で保存したものを返す・ふつうはネットの返事", st.ok, JSON.stringify(st)); }
   const shell = JSON.parse(sw.match(/SHELL = (\[[^\]]+\])/)[1].replace(/'/g, '"'));
-  const need = ["./index.html", "./transfer.js", "./data.js", "./ten.js", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
+  const need = ["./index.html", "./transfer.js", "./depth.js", "./data.js", "./ten.js", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
   check("PWA：ネットの返事の保存は、イベントの中で waitUntil に預ける（遅れて届いた新しい版も保存できる）", /e\.waitUntil\(new Promise\(\(r\) => \{ saved = r; \}\)\)/.test(sw));
   check("PWA：sw.js は画面のファイルを全部保存し、外へ何も送らない", need.every((f) => shell.includes(f)) && !/https?:\/\//.test(sw.replace(/^\/\/.*$/gm, "")));
   check("PWA：manifest にアイコン2つと名前がある", mf.name === "きっぷで10" && mf.icons.length >= 2 && mf.start_url === "./"); }
@@ -205,6 +206,45 @@ try {
   check("別解さがしは、その切符の練習になる", (await curT(page)).key === easy && (await page.evaluate(() => window.__kp.mode())) === "p");
   await page.close();
 
+  // 1問を深くする（shared-workflows routines/game-dev.md「1問を深くする」）：別の式でも通す・復習
+  {
+    const q = await newPage();
+    await q.click("#howto-ok").catch(() => {});
+    const key = await q.evaluate(() => { const g = window.__kp; return g.D.T[0].find((k) => g.info(k).ways >= 3); });
+    await q.evaluate(([k, KEY]) => { const g = window.__kp; localStorage.setItem(KEY, JSON.stringify({ v: 1, tut: true, days: {}, hdays: {}, dex: {}, found: {}, kofi: {}, runs: { p: { mode: "p", date: g.todayKey(), list: [k, g.D.T[0][0]], res: [], cur: null, id: "alt" } } })); g.play("p"); }, [key, KEY]);
+    await q.click("#hint"); await solveNow(q); await q.waitForSelector(".verdict");
+    check("通したあと「別の式でも通す」が出る（式が2通り以上の切符・高さ44px以上）", await q.locator("#alt").count() === 1 && (await q.$eval("#alt", (b) => b.getBoundingClientRect().height)) >= 44);
+    const f1 = await q.evaluate(() => Object.keys(window.__kp.load().found));
+    await q.click("#alt");
+    check("挑戦を始めると、同じ切符で計算し直せ・ヒントは出ない", await q.locator(".cardn[data-j]").count() === 4 && await q.locator("#ops:not([hidden])").count() === 1 && (await q.locator("#hint:visible").count()) === 0);
+    await solveNow(q); await q.waitForTimeout(100);
+    check("同じ式で10にすると「見つけた式です」と出て、通らない", (await q.textContent("#after")).includes("見つけた式です") && await q.locator(".verdict").count() === 0);
+    // まだ見つけていない式を、手順を探して入れる
+    const steps = await q.evaluate(() => { const g = window.__kp, c = g.cur(), s = g.load(), OPS = ["+", "-", "×", "÷"];
+      const go = (st) => { const h = g.handOf(c.no, st); if (!h) return null; const L = h.filter(Boolean); if (L.length === 1) { const v = L[0].v; return v.n === 10 && v.d === 1 && !s.found[c.key + "|" + window.TEN.show(L[0].e)] ? st : null; }
+        for (let a = 0; a < 4; a++) for (let b = 0; b < 4; b++) { if (a === b || !h[a] || !h[b]) continue; for (const op of OPS) { const r = go([...st, [a, op, b]]); if (r) return r; } } return null; };
+      return go([]); });
+    await q.click("#reset");
+    for (const [a, op, b] of steps) { await q.click(`.cardn[data-j="${a}"]`); await q.click(`.op[data-op="${op}"]`); await q.click(`.cardn[data-j="${b}"]`); }
+    await q.waitForSelector(".verdict");
+    const s2 = await q.evaluate(() => window.__kp.load());
+    check("別の式で通すと「新しい式！」・見つけた式が1つ増える・★と今日の記録は変わらない", (await q.textContent(".verdict")).includes("新しい式") && Object.keys(s2.found).length === f1.length + 1 && s2.runs.p.res.length === 1 && s2.runs.p.res[0].h === 1);
+    await q.click("#next");
+    check("挑戦のあとは次の切符へ進める", (await q.evaluate(() => window.__kp.cur().i)) === 1);
+    await solveNow(q); await q.waitForSelector(".verdict"); await q.click("#next"); await q.waitForTimeout(150);
+    const dp = await q.evaluate(() => JSON.parse(localStorage.getItem("kippu-depth") || "{}"));
+    check("ヒントを使った切符だけ復習に入る", Object.keys(dp.rv || {}).join() === key, Object.keys(dp.rv || {}).join());
+    await q.evaluate(() => { const d = JSON.parse(localStorage.getItem("kippu-depth")); for (const k in d.rv) d.rv[k].due = "2026-01-01"; localStorage.setItem("kippu-depth", JSON.stringify(d)); });
+    await q.goto(url); await q.waitForTimeout(150);
+    check("日の来た復習があると、ホームに「復習 1枚」", (await q.textContent("#go-r")).includes("復習 1枚"));
+    const before = await q.evaluate(() => window.__kp.load().days);
+    await q.click("#go-r");
+    check("復習の画面は「復習」と出る・同じ切符", (await q.textContent("header")).includes("復習") && (await curT(q)).key === key);
+    await solveNow(q); await q.waitForSelector(".verdict"); await q.click("#next"); await q.waitForTimeout(150);
+    const after = await q.evaluate(() => window.__kp.load().days), dp2 = await q.evaluate(() => JSON.parse(localStorage.getItem("kippu-depth")));
+    check("復習を終えると結果は「復習」・今日の記録は増えない・次は3日後", (await q.textContent("h1")).includes("復習") && JSON.stringify(after) === JSON.stringify(before) && Object.values(dp2.rv).every((x) => x.s === 1));
+    await q.close();
+  }
   // 4. スマホ幅：はみ出さない・押せる所は44px以上
   for (const w of [320, 390]) {
     const p3 = await newPage(w, 700); const fb2 = await p3.evaluate(() => { const a = document.querySelector("#howto #fb2"); return a ? a.getBoundingClientRect().height : 0; }); check(`幅${w}px：遊び方の「感想を送る」も高さ44px以上`, fb2 >= 44, `${fb2}px`); await p3.click("#howto-ok");
@@ -532,6 +572,7 @@ try {
     await pf.close();
   } catch (e) { check("キーボードで選んだボタン（カレンダーのあとから遊ぶ日も）に枠が出る", false, e.message.split("\n")[0]); }
   try { // 引き継ぎコード（別の端末へ記録を移す。shared-workflows template/qa/transfer-check.mjs）
+    { const e = await checkDepth(readFileSync(path.join(root, "depth.js"), "utf8")); check("depth.js（自信をかける・復習）の動き", e.length === 0, e.join(" / ")); }
     await checkTransfer({ browser, url, game: "kippu-10", sample: { "kippu-v1": JSON.stringify({ v: 1, tut: true, seen: { "0019": 1, "0025": 1 } }) }, check, open: async (p) => { await p.click("#howto-ok", { timeout: 1500 }).catch(() => {}); } });
   } catch (e) { check("引き継ぎコード", false, e.message.split("\n")[0]); }
   // 保存に失敗したら知らせる（2026-11-07 暑さ指数よみで見つけた。黙って記録が消えないように）

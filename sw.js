@@ -9,8 +9,8 @@
 //      保存したものは自分の版（cacheName）からだけ探す・入れるときは HTTP の保存を通さない（cache: "reload"）・
 //      長い受信でも保存し直しが終わるまで waitUntil で待つ
 // game:begin
-const CACHE = "kippu-v12";
-const SHELL = ["./", "./index.html", "./data.js", "./ten.js", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./transfer.js"];
+const CACHE = "kippu-v13";
+const SHELL = ["./", "./index.html", "./data.js", "./ten.js", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./transfer.js", "./depth.js"];
 // game:end
 
 // 同じゲームの古い版（<名前>-v<数字>）だけを消す。同じサイトのほかのゲーム（kotowaza- と kotowaza-bamen- など）の保存には触らない
