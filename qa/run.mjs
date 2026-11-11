@@ -243,6 +243,10 @@ try {
     await solveNow(q); await q.waitForSelector(".verdict"); await q.click("#next"); await q.waitForTimeout(150);
     const after = await q.evaluate(() => window.__kp.load().days), dp2 = await q.evaluate(() => JSON.parse(localStorage.getItem("kippu-depth")));
     check("復習を終えると結果は「復習」・今日の記録は増えない・次は3日後", (await q.textContent("h1")).includes("復習") && JSON.stringify(after) === JSON.stringify(before) && Object.values(dp2.rv).every((x) => x.s === 1));
+    // 引き継ぎなどで作り直せない鍵が入っても、ホームは止まらず数えない（2026-11-11 CodeRabbit）
+    await q.evaluate(() => { const d = JSON.parse(localStorage.getItem("kippu-depth")); d.rv["0000"] = { s: 0, due: "2026-01-01", t: 1 }; d.rv["constructor"] = { s: 0, due: "2026-01-01", t: 2 }; localStorage.setItem("kippu-depth", JSON.stringify(d)); });
+    await q.goto(url); await q.waitForTimeout(150);
+    check("作り直せない鍵（無い切符・constructor）は復習に数えず、ホームも出る", await q.locator("#go-d").count() === 1 && await q.locator("#go-r").count() === 0);
     await q.close();
   }
   // 4. スマホ幅：はみ出さない・押せる所は44px以上

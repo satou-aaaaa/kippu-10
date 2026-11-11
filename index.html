@@ -341,6 +341,7 @@ const FEEDBACK = "https://github.com/satou-aaaaa/kippu-10/issues/new?template=fe
 const KEY = "kippu-v1", EPOCH = "2026-11-04";
 const LV = ["やさしい", "ふつう", "むずかしい"];
 const D = window.TEN_DATA, ALL = [...D.T[0], ...D.T[1], ...D.T[2]];
+Depth.setValid((x) => Object.prototype.hasOwnProperty.call(D.S, x)); // 作り直せない鍵（引き継ぎ・消えた切符）は復習に数えない
 const info = (key) => { const a = D.S[key]; return { key, ways: a[0], int: !!a[1], sol: a[2], forms: a[3], t: D.T[0].includes(key) ? 0 : D.T[1].includes(key) ? 1 : 2 }; };
 
 // ---- 日付と乱数（日本時間。だれでも同じ5枚）----
@@ -495,7 +496,7 @@ function startRun(mode, opt) {
       return;
     }
     // 復習：日の来た切符（depth.js）。多くて10枚。今日の記録・連続・Ko-fi には数えない
-    if (mode === "r") { const r0 = s.runs.r; if (r0 && r0.date === k && !doneOf(r0)) return; const list = Depth.due().filter((x) => D.S[x]); if (!list.length) { ng = "r"; return; } s.runs.r = { mode, date: k, list, res: [], cur: null, id: "r" + Date.now(), a0: achGot(s) }; return; }
+    if (mode === "r") { const r0 = s.runs.r; if (r0 && r0.date === k && !doneOf(r0)) return; const list = Depth.due(); if (!list.length) { ng = "r"; return; } s.runs.r = { mode, date: k, list, res: [], cur: null, id: "r" + Date.now(), a0: achGot(s) }; return; }
     if (mode === "e") { if (s.runs.e) return; s.runs.e = { mode, date: k, list: endlessList(s), res: [], cur: null, id: Date.now() + "-" + Math.random().toString(36).slice(2, 8), a0: achGot(s) }; return; } // とことん：途中なら続きから（日をまたいでも続けられる）
     if (mode !== "p" && s.runs[mode] && s.runs[mode].date === k) return; // 続きから
     if ((mode === "d" && s.days[k]) || (mode === "h" && s.hdays[k])) return; // 別のタブで今日の分を終えていたら、もう一度は始めない（ホームに戻る）
