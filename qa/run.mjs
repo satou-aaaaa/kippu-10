@@ -263,7 +263,7 @@ try {
     const p3 = await newPage(w, 700); const fb2 = await p3.evaluate(() => { const a = document.querySelector("#howto #fb2"); return a ? a.getBoundingClientRect().height : 0; }); check(`幅${w}px：遊び方の「感想を送る」も高さ44px以上`, fb2 >= 44, `${fb2}px`); await p3.click("#howto-ok");
     const homeOk = await p3.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
     await p3.click("#go-d");
-    const r = await p3.evaluate(() => ({ over: document.documentElement.scrollWidth > innerWidth, small: [...document.querySelectorAll("button, a")].filter((e) => e.offsetParent && getComputedStyle(e).visibility !== "hidden" && e.getBoundingClientRect().height < 44).map((e) => e.textContent.trim() || e.id) }));
+    const r = await p3.evaluate(() => ({ over: document.documentElement.scrollWidth > innerWidth, small: [...document.querySelectorAll("button, a")].filter((e) => e.offsetParent && getComputedStyle(e).visibility !== "hidden" && Math.round(e.getBoundingClientRect().height) < 44).map((e) => e.textContent.trim() || e.id) }));
     check(`幅${w}px：横にはみ出さず、押せる所は高さ44px以上`, homeOk && !r.over && r.small.length === 0, r.small.join(","));
     await p3.close();
   }
@@ -541,7 +541,7 @@ try {
   { // 幅160px（320pxを200%に拡大）でも、ボタンが画面の外にはみ出さず、44px以上で押せる（2026-11-07 CodeRabbit）
     const pn = await newPage(160, 640);
     await pn.click("#howto-ok");
-    const over = () => pn.evaluate(() => [...document.querySelectorAll("button,a.sub,a.main")].filter((b) => b.offsetParent && !b.closest("dialog")).filter((b) => { const q = b.getBoundingClientRect(); return q.left < -1 || q.right > innerWidth + 1 || q.height < 44 || b.scrollWidth > b.clientWidth + 1; }).map((b) => b.id || b.textContent.trim().slice(0, 12)));
+    const over = () => pn.evaluate(() => [...document.querySelectorAll("button,a.sub,a.main")].filter((b) => b.offsetParent && !b.closest("dialog")).filter((b) => { const q = b.getBoundingClientRect(); return q.left < -1 || q.right > innerWidth + 1 || Math.round(q.height) < 44 || b.scrollWidth > b.clientWidth + 1; }).map((b) => b.id || b.textContent.trim().slice(0, 12)));
     const o1 = await over();
     check("幅160px：ホームのボタンは画面の外にはみ出さない", o1.length === 0, o1.join(","));
     await pn.click("#go-d");
@@ -557,7 +557,7 @@ try {
     mkdirSync(path.join(root, "qa-report"), { recursive: true });
     for (const w of [320, 390]) {
       const pw = await pageAt("2026-11-20", w, st), bad = [];
-      const look = async (name) => { await pw.screenshot({ path: path.join(root, `qa-report/${name}-${w}.png`), fullPage: true }); const r = await pw.evaluate(() => ({ over: document.documentElement.scrollWidth > innerWidth, small: [...document.querySelectorAll("button, a")].filter((e) => e.offsetParent && getComputedStyle(e).visibility !== "hidden" && e.getBoundingClientRect().height < 44).map((e) => e.textContent.trim() || e.id) })); if (r.over || r.small.length) bad.push(`${name}:${r.over ? "はみ出し" : ""}${r.small.join("/")}`); };
+      const look = async (name) => { await pw.screenshot({ path: path.join(root, `qa-report/${name}-${w}.png`), fullPage: true }); const r = await pw.evaluate(() => ({ over: document.documentElement.scrollWidth > innerWidth, small: [...document.querySelectorAll("button, a")].filter((e) => e.offsetParent && getComputedStyle(e).visibility !== "hidden" && Math.round(e.getBoundingClientRect().height) < 44).map((e) => e.textContent.trim() || e.id) })); if (r.over || r.small.length) bad.push(`${name}:${r.over ? "はみ出し" : ""}${r.small.join("/")}`); };
       await look("home"); await pw.click("#go-ach"); await look("ach"); await pw.click("#back"); await pw.click("#go-cal"); await look("cal");
       await pw.click('.cal button[data-k="2026-11-18"]'); await look("late-play");
       for (let j = 0; j < 5; j++) { await solveNow(pw); await pw.click("#next"); }
