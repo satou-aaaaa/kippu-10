@@ -39,6 +39,8 @@ const D = sb.window.TEN_DATA, ALL = [...D.T[0], ...D.T[1], ...D.T[2]];
 }
 
 const html = readFileSync(path.join(root, "index.html"), "utf8");
+// ひな形の写し（<!-- 名前:begin〜end -->）はゲームの言葉ではないので外し、Core.kofi・Core.KOFI は写す前の形にもどして見る（shared-workflows の sync-template が足した）
+const gameOwn = (t) => t.replace(/<!-- ([a-z0-9-]+):begin[\s\S]*?<!-- \1:end -->/g, "").split("${Core.KOFI}").join("https://ko-fi.com/satouaaaaa").replace(/Core\.kofi\(("(?:[^"\\]|\\.)*"), ("(?:[^"\\]|\\.)*")\)/g, (m, a, b) => "`<p class=\"note kofi\">" + JSON.parse(a) + "、<a href=\"https://ko-fi.com/satouaaaaa\" target=\"_blank\" rel=\"noopener\">Ko-fi でコーヒー1杯の応援</a>をもらえると、" + JSON.parse(b) + "の励みになります（任意・遊ぶのはずっと無料）。</p>`");
 check("終えた回を消すのは同じ回のときだけ・0時を過ぎたホームの「今日」のボタンは描き直す（2026-11-04 CodeRabbit）", /c\.date === run\.date && c\.id === run\.id\) s2\.runs\[MODE\] = null/.test(html) && /\$\("go-d"\)\.onclick = \(\) => \(k !== todayKey\(\) \? home\(\)/.test(html));
 check("別のタブで今日の分を終えたあと、古い画面から今日・上級をもう一度始めない（2026-11-04 CodeRabbit）", /\(mode === "d" && s\.days\[k\]\) \|\| \(mode === "h" && s\.hdays\[k\]\)\) return;/.test(html));
 check("README の URL のすぐ後ろに全角の字を続けない（Link check が URL の一部と読む。2026-11-04）", !/https?:\/\/[\x21-\x7e]*[^\x00-\x7f]/.test(readFileSync(new URL("../README.md", import.meta.url), "utf8").replace(/\]\(https?:\/\/[^)\s]+\)/g, "").replace(/<https?:\/\/[^>\s]+>/g, "")));
@@ -178,7 +180,7 @@ try {
   const share = await page.textContent(".share");
   const daily = await page.evaluate(() => { const g = window.__kp; return g.dailyList(g.todayKey()); });
   check("5枚で結果・シェアの文は番号と色だけ（切符の数字・式は出さない）", /きっぷで10 #\d+/.test(share) && /🚃🟨🟩🟩🟩🟩/.test(share) && !daily.some((k) => share.includes(k)) && !/[×÷]/.test(share));
-  check("X・LINE は押したときに開くリンクだけ", /^https:\/\/twitter\.com\/intent\/tweet\?text=/.test(await page.getAttribute("#toX", "href")) && /^https:\/\/line\.me\/R\/share\?text=/.test(await page.getAttribute("#toLine", "href")));
+  check("X・LINE は押したときに開くリンクだけ", /^https:\/\/(?:x|twitter)\.com\/intent\/tweet\?text=/.test(await page.getAttribute("#toX", "href")) && /^https:\/\/line\.me\/R\/share\?text=/.test(await page.getAttribute("#toLine", "href")));
   check("ヒントを使った日は Ko-fi のひとことを出さない", (await page.locator(".kofi").count()) === 0);
   await page.click("#back");
   check("ホームで連続1日・今日の結果を見るに変わる・切符帳に5枚", (await page.textContent(".stats")).includes("1連続の日") && (await page.textContent("#go-d")).includes("今日の結果") && (await page.textContent("#go-dex")).includes("5/"));
@@ -463,7 +465,7 @@ try {
   { // 好きなだけ遊べる：🔒で開くモード・チケット・回数制限を入れない。Ko-fi は結果の画面の1行と、下のリンクだけ（2026-11-06 satou さん）
     const pg = await pageAt("2026-11-20", 390, base());
     const html = await pg.evaluate(() => document.documentElement.outerHTML);
-    check("ページに🎫・🔒・「すると開く」が無い", !html.includes("🎫") && !html.includes("🔒") && !/すると開く|で開く[」）]/.test(html));
+    check("ページに🎫・🔒・「すると開く」が無い", !gameOwn(html).includes("🎫") && !gameOwn(html).includes("🔒") && !/すると開く|で開く[」）]/.test(gameOwn(html)));
     await firstClose(pg);
     check("はじめて開いた日から上級・とことん・練習を押せる", (await pg.locator("#go-h").count()) === 1 && (await pg.locator("#go-e").count()) === 1 && (await pg.locator("#go-p").count()) === 1);
     check("ホームに Ko-fi のひとこと（.kofi）を出さない（下のリンクだけ）", (await pg.locator(".kofi").count()) === 0 && (await pg.locator('footer a[href*="ko-fi.com"]').count()) === 1 && (await pg.locator('a[href*="ko-fi.com"]').count()) === 1);
